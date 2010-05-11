@@ -1,6 +1,9 @@
 require 'rubygems'
 require 'savon'
 require 'savon_ext'
+require 'ap'
+require 'nokogiri'
+require 'spreadsheet'
 
 username = ENV['AFFILIATE_WINDOW_ID']
 password = ENV['AFFILIATE_WINDOW_PASSWORD']
@@ -23,4 +26,21 @@ client = Savon::Client.new "http://api.affiliatewindow.com/v3/AffiliateService?w
   }
 end
 
-puts client.get_merchant_list
+xml = client.get_merchant_list.to_xml
+doc = Nokogiri::XML(xml);
+doc.xpath
+merchants = doc.xpath('//ns1:Merchant')
+merchant_info = merchants.map{|m|[m.xpath('ns1:sName/text()').to_s, m.xpath('ns1:sDisplayUrl/text()').to_s]}
+
+book = Spreadsheet::Workbook.new
+sheet1 = book.create_worksheet
+
+sheet1.name = "Merchants"
+merchant_info.sort{|a,b|a[0].downcase <=> b[0].downcase}.each_with_index do |m, row|
+  sheet1.update_row row, m[0], m[1]
+end
+
+book.write 'af.xls'
+
+
+
